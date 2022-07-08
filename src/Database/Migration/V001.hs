@@ -108,7 +108,6 @@ data NewsT f = News
     _nCreator :: PrimaryKey UserT f,
     _nCat :: PrimaryKey CatT f,
     _nText :: Columnar f Text,
-    _nPictures :: Columnar f [Int],
     _mIsPublished :: Columnar f Bool
   }
   deriving (Generic, Beamable)
@@ -147,5 +146,81 @@ News
   (UserId (LensFor newsCreator))
   (CatId (LensFor newsCat))
   (LensFor newsText)
-  (LensFor newsPictures)
   (LensFor isNewsPublished) = tableLenses
+
+-- Image type
+data ImageT f = Image
+  { _iId :: Columnar f Int,
+    _iData :: Columnar f Text
+  }
+  deriving (Generic, Beamable)
+
+type Image = ImageT Identity
+
+deriving instance Show Image
+
+deriving instance Eq Image
+
+instance FromJSON Image where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON Image where
+  toJSON = A.genericToJSON A.customOptions
+
+instance Table ImageT where
+  data PrimaryKey ImageT f = ImageId (Columnar f Int)
+    deriving (Generic, Beamable)
+  primaryKey = ImageId . _iId
+
+deriving instance Show (PrimaryKey ImageT Identity)
+
+deriving instance Eq (PrimaryKey ImageT Identity)
+
+instance FromJSON (PrimaryKey ImageT Identity) where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON (PrimaryKey ImageT Identity) where
+  toJSON = A.genericToJSON A.customOptions
+
+Image
+  (LensFor imageId)
+  (LensFor imageData) = tableLenses
+
+data ImageToNewsT f = ImageToNews
+  { _itnId :: Columnar f Int,
+    _itnImageId :: PrimaryKey ImageT f,
+    _itnNewsId :: PrimaryKey NewsT f
+  }
+  deriving (Generic, Beamable)
+
+type ImageToNews = ImageToNewsT Identity
+
+deriving instance Show ImageToNews
+
+deriving instance Eq ImageToNews
+
+instance FromJSON ImageToNews where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 4)
+
+instance ToJSON ImageToNews where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
+
+instance Table ImageToNewsT where
+  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f Int)
+    deriving (Generic, Beamable)
+  primaryKey = ImageToNewsId . _itnId
+
+deriving instance Show (PrimaryKey ImageToNewsT Identity)
+
+deriving instance Eq (PrimaryKey ImageToNewsT Identity)
+
+instance FromJSON (PrimaryKey ImageToNewsT Identity) where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 4)
+
+instance ToJSON (PrimaryKey ImageToNewsT Identity) where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
+
+ImageToNews
+  (LensFor itnId)
+  (ImageId (LensFor itnImageId))
+  (NewsId (LensFor itnNewsId)) = tableLenses

@@ -30,6 +30,7 @@ dependencies:
 - aeson-extra
 - time
 - cryptonite
+- base64
 
 default-extensions: 
 - NoImplicitPrelude

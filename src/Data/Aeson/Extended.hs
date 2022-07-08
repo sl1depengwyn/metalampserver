@@ -3,13 +3,17 @@ module Data.Aeson.Extended
     module Data.Aeson.Extra,
     module Data.Aeson.Types,
     customOptions,
+    customOptionsWithDrop
   )
 where
 
-import Universum
-import Data.Aeson.Extra
 import Data.Aeson
+import Data.Aeson.Extra
 import Data.Aeson.Types
+import Universum
 
 customOptions :: Options
-customOptions = defaultOptions {fieldLabelModifier = camelTo2 '_' . drop 2, sumEncoding = UntaggedValue}
+customOptions = customOptionsWithDrop 2
+
+customOptionsWithDrop :: Int -> Options
+customOptionsWithDrop n = defaultOptions {fieldLabelModifier = camelTo2 '_' . drop n, sumEncoding = UntaggedValue}

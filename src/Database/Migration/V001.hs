@@ -7,6 +7,8 @@
 
 module Database.Migration.V001 where
 
+import Data.Aeson.Extended (FromJSON, ToJSON)
+import qualified Data.Aeson.Extended as A
 import Data.Time
 import Database.Beam
 import Database.Beam.Backend
@@ -14,6 +16,7 @@ import Database.Beam.Migrate
 import Database.Beam.Postgres
 import Universum
 
+-- | User type
 data UserT f = User
   { _uId :: Columnar f Int,
     _uLogin :: Columnar f Text,
@@ -30,6 +33,12 @@ deriving instance Show User
 
 deriving instance Eq User
 
+instance FromJSON User where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON User where
+  toJSON = A.genericToJSON A.customOptions
+
 instance Table UserT where
   data PrimaryKey UserT f = UserId (Columnar f Int)
     deriving (Generic, Beamable)
@@ -39,6 +48,12 @@ deriving instance Show (PrimaryKey UserT Identity)
 
 deriving instance Eq (PrimaryKey UserT Identity)
 
+instance FromJSON (PrimaryKey UserT Identity) where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON (PrimaryKey UserT Identity) where
+  toJSON = A.genericToJSON A.customOptions
+
 User
   (LensFor userId)
   (LensFor userLogin)
@@ -47,6 +62,7 @@ User
   (LensFor isUserAdmin)
   (LensFor canUserCreate) = tableLenses
 
+-- | Category type
 data CatT f = Cat
   { _cId :: Columnar f Int,
     _cParent :: PrimaryKey CatT f
@@ -59,6 +75,12 @@ deriving instance Show Cat
 
 deriving instance Eq Cat
 
+instance FromJSON Cat where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON Cat where
+  toJSON = A.genericToJSON A.customOptions
+
 instance Table CatT where
   data PrimaryKey CatT f = CatId (Columnar f Int)
     deriving (Generic, Beamable)
@@ -68,10 +90,17 @@ deriving instance Show (PrimaryKey CatT Identity)
 
 deriving instance Eq (PrimaryKey CatT Identity)
 
+instance FromJSON (PrimaryKey CatT Identity) where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON (PrimaryKey CatT Identity) where
+  toJSON = A.genericToJSON A.customOptions
+
 Cat
   (LensFor catId)
   (CatId (LensFor catParent)) = tableLenses
 
+-- | News type
 data NewsT f = News
   { _nId :: Columnar f Int,
     _nTitle :: Columnar f Text,
@@ -90,6 +119,12 @@ deriving instance Show News
 
 deriving instance Eq News
 
+instance FromJSON News where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON News where
+  toJSON = A.genericToJSON A.customOptions
+
 instance Table NewsT where
   data PrimaryKey NewsT f = NewsId (Columnar f Int)
     deriving (Generic, Beamable)
@@ -98,6 +133,12 @@ instance Table NewsT where
 deriving instance Show (PrimaryKey NewsT Identity)
 
 deriving instance Eq (PrimaryKey NewsT Identity)
+
+instance FromJSON (PrimaryKey NewsT Identity) where
+  parseJSON = A.genericParseJSON A.customOptions
+
+instance ToJSON (PrimaryKey NewsT Identity) where
+  toJSON = A.genericToJSON A.customOptions
 
 News
   (LensFor newsId)

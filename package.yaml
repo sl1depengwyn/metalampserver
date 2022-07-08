@@ -29,6 +29,7 @@ dependencies:
 - aeson
 - aeson-extra
 - time
+- cryptonite
 
 default-extensions: 
 - NoImplicitPrelude

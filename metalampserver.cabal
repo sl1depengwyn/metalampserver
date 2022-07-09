@@ -40,12 +40,15 @@ library
       aeson
     , aeson-extra
     , base >=4.7 && <5
+    , base64
     , beam-core
     , beam-migrate
     , beam-postgres
+    , cryptonite
     , microlens
     , time
     , universum
+    , uuid-types
   default-language: Haskell2010
 
 executable metalampserver-exe
@@ -61,13 +64,16 @@ executable metalampserver-exe
       aeson
     , aeson-extra
     , base >=4.7 && <5
+    , base64
     , beam-core
     , beam-migrate
     , beam-postgres
+    , cryptonite
     , metalampserver
     , microlens
     , time
     , universum
+    , uuid-types
   default-language: Haskell2010
 
 test-suite metalampserver-test
@@ -84,11 +90,14 @@ test-suite metalampserver-test
       aeson
     , aeson-extra
     , base >=4.7 && <5
+    , base64
     , beam-core
     , beam-migrate
     , beam-postgres
+    , cryptonite
     , metalampserver
     , microlens
     , time
     , universum
+    , uuid-types
   default-language: Haskell2010

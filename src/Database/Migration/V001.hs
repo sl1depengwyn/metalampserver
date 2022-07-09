@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,21 +10,24 @@ module Database.Migration.V001 where
 
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
-import Data.Time
+import Data.Time (UTCTime)
+import Data.UUID.Types
 import Database.Beam
 import Database.Beam.Backend
+import Database.Beam.Backend.SQL.Types
 import Database.Beam.Migrate
 import Database.Beam.Postgres
+import Database.Beam.Postgres.Extensions.UuidOssp
 import Universum
 
 -- | User type
 data UserT f = User
-  { _uId :: Columnar f Int,
+  { _uId :: Columnar f (SqlSerial Int),
     _uLogin :: Columnar f Text,
     _uPassword :: Columnar f Text,
     _uDateOfRegistration :: Columnar f UTCTime,
-    _isAdmin :: Columnar f Bool,
-    _canCreate :: Columnar f Bool
+    _uIsAdmin :: Columnar f Bool,
+    _uCanCreate :: Columnar f Bool
   }
   deriving (Generic, Beamable)
 
@@ -40,7 +44,7 @@ instance ToJSON User where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table UserT where
-  data PrimaryKey UserT f = UserId (Columnar f Int)
+  data PrimaryKey UserT f = UserId (Columnar f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = UserId . _uId
 
@@ -64,7 +68,7 @@ User
 
 -- | Category type
 data CatT f = Cat
-  { _cId :: Columnar f Int,
+  { _cId :: Columnar f (SqlSerial Int),
     _cParent :: PrimaryKey CatT f
   }
   deriving (Generic, Beamable)
@@ -82,7 +86,7 @@ instance ToJSON Cat where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table CatT where
-  data PrimaryKey CatT f = CatId (Columnar f Int)
+  data PrimaryKey CatT f = CatId (Columnar f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = CatId . _cId
 
@@ -102,7 +106,7 @@ Cat
 
 -- | News type
 data NewsT f = News
-  { _nId :: Columnar f Int,
+  { _nId :: Columnar f (SqlSerial Int),
     _nTitle :: Columnar f Text,
     _nDateOfCreation :: Columnar f UTCTime,
     _nCreator :: PrimaryKey UserT f,
@@ -125,7 +129,7 @@ instance ToJSON News where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table NewsT where
-  data PrimaryKey NewsT f = NewsId (Columnar f Int)
+  data PrimaryKey NewsT f = NewsId (Columnar f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = NewsId . _nId
 
@@ -150,7 +154,7 @@ News
 
 -- Image type
 data ImageT f = Image
-  { _iId :: Columnar f Int,
+  { _iId :: Columnar f (SqlSerial Int),
     _iData :: Columnar f Text
   }
   deriving (Generic, Beamable)
@@ -168,7 +172,7 @@ instance ToJSON Image where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table ImageT where
-  data PrimaryKey ImageT f = ImageId (Columnar f Int)
+  data PrimaryKey ImageT f = ImageId (Columnar f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = ImageId . _iId
 
@@ -186,8 +190,9 @@ Image
   (LensFor imageId)
   (LensFor imageData) = tableLenses
 
+-- | Image to News type
 data ImageToNewsT f = ImageToNews
-  { _itnId :: Columnar f Int,
+  { _itnId :: Columnar f (SqlSerial Int),
     _itnImageId :: PrimaryKey ImageT f,
     _itnNewsId :: PrimaryKey NewsT f
   }
@@ -206,7 +211,7 @@ instance ToJSON ImageToNews where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
 
 instance Table ImageToNewsT where
-  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f Int)
+  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = ImageToNewsId . _itnId
 
@@ -224,3 +229,70 @@ ImageToNews
   (LensFor itnId)
   (ImageId (LensFor itnImageId))
   (NewsId (LensFor itnNewsId)) = tableLenses
+
+-- | News DataBase
+data NewsDb f = NewsDb
+  { _nUsers :: f (TableEntity UserT),
+    _nCats :: f (TableEntity CatT),
+    _nNews :: f (TableEntity NewsT),
+    _nImages :: f (TableEntity ImageT),
+    _nImagesToNews :: f (TableEntity ImageToNewsT)
+  }
+  deriving (Generic, Database Postgres)
+
+NewsDb
+  (TableLens nUsers)
+  (TableLens nCats)
+  (TableLens nNews)
+  (TableLens nImages)
+  (TableLens nImagesToNews) = dbLenses
+
+utctime :: BeamSqlBackend be => DataType be UTCTime
+utctime = DataType (timestampType Nothing True)
+
+varcharOf :: BeamSqlBackend be => Word -> DataType be Text
+varcharOf n = varchar (Just n)
+
+migration :: () -> Migration Postgres (CheckedDatabaseSettings Postgres NewsDb)
+migration () =
+  NewsDb
+    <$> ( createTable "users" $
+            User
+              { _uId = field "id" serial notNull unique,
+                _uLogin = field "login" (varcharOf 64) notNull,
+                _uPassword = field "password" (varcharOf 64) notNull,
+                _uDateOfRegistration = field "registration_date" utctime notNull,
+                _uIsAdmin = field "is_admin" boolean notNull,
+                _uCanCreate = field "can_create" boolean notNull
+              }
+        )
+    <*> ( createTable "categories" $
+            Cat
+              { _cId = field "id" serial notNull unique,
+                _cParent = CatId (field "parent_id" serial notNull)
+              }
+        )
+    <*> ( createTable "news" $
+            News
+              { _nId = field "id" serial notNull unique,
+                _nTitle = field "title" (varcharOf 128) notNull,
+                _nDateOfCreation = field "creation_date" utctime notNull,
+                _nCreator = UserId (field "creator_id" serial notNull),
+                _nCat = CatId (field "category_id" serial notNull),
+                _nText = field "text" (varchar Nothing) notNull,
+                _mIsPublished = field "is_published" boolean notNull
+              }
+        )
+    <*> ( createTable "images" $
+            Image
+              { _iId = field "id" serial notNull unique,
+                _iData = field "data" (varchar Nothing) notNull
+              }
+        )
+    <*> ( createTable "image_to_news" $
+            ImageToNews
+              { _itnId = field "id" serial notNull unique,
+                _itnImageId = ImageId (field "image_id" serial notNull),
+                _itnNewsId = NewsId (field "news_id" serial notNull)
+              }
+        )

@@ -31,6 +31,7 @@ dependencies:
 - time
 - cryptonite
 - base64
+- uuid-types
 
 default-extensions: 
 - NoImplicitPrelude

@@ -46,13 +46,18 @@ library
     , beam-core
     , beam-migrate
     , beam-postgres
+    , bytestring
     , cryptonite
     , fast-logger
     , microlens
     , postgresql-simple
     , resource-pool
+    , servant
+    , servant-server
     , time
     , universum
+    , wai
+    , warp
   default-language: Haskell2010
 
 executable metalampserver-exe
@@ -72,14 +77,19 @@ executable metalampserver-exe
     , beam-core
     , beam-migrate
     , beam-postgres
+    , bytestring
     , cryptonite
     , fast-logger
     , metalampserver
     , microlens
     , postgresql-simple
     , resource-pool
+    , servant
+    , servant-server
     , time
     , universum
+    , wai
+    , warp
   default-language: Haskell2010
 
 test-suite metalampserver-test
@@ -100,12 +110,17 @@ test-suite metalampserver-test
     , beam-core
     , beam-migrate
     , beam-postgres
+    , bytestring
     , cryptonite
     , fast-logger
     , metalampserver
     , microlens
     , postgresql-simple
     , resource-pool
+    , servant
+    , servant-server
     , time
     , universum
+    , wai
+    , warp
   default-language: Haskell2010

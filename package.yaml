@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - universum
+- bytestring
 - beam-core
 - beam-postgres
 - beam-migrate
@@ -34,6 +35,10 @@ dependencies:
 - postgresql-simple
 - resource-pool
 - fast-logger
+- servant-server
+- servant
+- wai
+- warp
 
 default-extensions: 
 - NoImplicitPrelude

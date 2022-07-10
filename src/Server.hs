@@ -1,1 +1,51 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Server where
+
+import Data.Aeson.Extended (FromJSON)
+import qualified Data.Aeson.Extended as A
+import qualified Data.ByteString.Lazy as BSL (fromStrict)
+import qualified Database as DB
+import qualified Logger
+import Servant
+import Servant.API.ContentTypes
+import Universum hiding (Handle)
+
+data Config = Config {cPort :: Int, cToken :: Text} deriving (Show, Generic)
+
+instance FromJSON Config where
+  parseJSON = A.genericParseJSON A.customOptions
+
+data Handle = Handle
+  { hConfig :: Config,
+    hDatabase :: DB.Handle,
+    hLogger :: Logger.Handle
+  }
+
+type AppM = ReaderT Handle Handler
+
+withHandle ::
+  Config ->
+  DB.Handle ->
+  Logger.Handle ->
+  (Handle -> IO ()) ->
+  IO ()
+withHandle c db logger f = f Handle {hConfig = c, hDatabase = db, hLogger = logger}
+
+data WithCT = WithCT {header :: ByteString, content :: ByteString}
+
+instance AllCTRender '[IMAGE] WithCT where
+  handleAcceptH _ _ (WithCT h c) = Just (BSL.fromStrict h, BSL.fromStrict c)
+
+data IMAGE deriving (Typeable)
+
+instance MimeRender IMAGE ByteString where
+  mimeRender _ = BSL.fromStrict
+
+instance Accept IMAGE where
+  contentType _ = ""
+

@@ -30,6 +30,8 @@ library
       Database.Migration
       Database.Migration.V001
       Lib
+      Logger
+      Server
   other-modules:
       Paths_metalampserver
   hs-source-dirs:
@@ -45,10 +47,12 @@ library
     , beam-migrate
     , beam-postgres
     , cryptonite
+    , fast-logger
     , microlens
+    , postgresql-simple
+    , resource-pool
     , time
     , universum
-    , uuid-types
   default-language: Haskell2010
 
 executable metalampserver-exe
@@ -69,11 +73,13 @@ executable metalampserver-exe
     , beam-migrate
     , beam-postgres
     , cryptonite
+    , fast-logger
     , metalampserver
     , microlens
+    , postgresql-simple
+    , resource-pool
     , time
     , universum
-    , uuid-types
   default-language: Haskell2010
 
 test-suite metalampserver-test
@@ -95,9 +101,11 @@ test-suite metalampserver-test
     , beam-migrate
     , beam-postgres
     , cryptonite
+    , fast-logger
     , metalampserver
     , microlens
+    , postgresql-simple
+    , resource-pool
     , time
     , universum
-    , uuid-types
   default-language: Haskell2010

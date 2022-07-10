@@ -31,7 +31,9 @@ dependencies:
 - time
 - cryptonite
 - base64
-- uuid-types
+- postgresql-simple
+- resource-pool
+- fast-logger
 
 default-extensions: 
 - NoImplicitPrelude

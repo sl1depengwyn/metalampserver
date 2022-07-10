@@ -11,7 +11,6 @@ module Database.Migration.V001 where
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
 import Data.Time (UTCTime)
-import Data.UUID.Types
 import Database.Beam
 import Database.Beam.Backend
 import Database.Beam.Backend.SQL.Types

@@ -5,6 +5,7 @@ module Database where
 import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
 import qualified Data.Pool as Pool
+import Data.Time.Calendar
 import Database.Beam.Migrate
 import Database.Beam.Migrate.Simple
 import Database.Beam.Postgres
@@ -46,3 +47,6 @@ migrateDB h conn =
       allowDestructive
       PG.migrationBackend
       migration
+
+runQuery :: Handle -> Pg b -> IO b
+runQuery h q = Pool.withResource (hPool h) $ \conn -> runBeamPostgresDebug (Logger.debug (hLogger h)) conn q

@@ -29,9 +29,12 @@ library
       Database
       Database.Migration
       Database.Migration.V001
+      Database.News
       Lib
       Logger
       Server
+      Server.Main
+      Server.News
   other-modules:
       Paths_metalampserver
   hs-source-dirs:

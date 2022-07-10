@@ -3,13 +3,16 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Server where
 
 import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
 import qualified Data.ByteString.Lazy as BSL (fromStrict)
+import Data.Time.Calendar
 import qualified Database as DB
+import Database.Migration
 import qualified Logger
 import Servant
 import Servant.API.ContentTypes
@@ -49,3 +52,8 @@ instance MimeRender IMAGE ByteString where
 instance Accept IMAGE where
   contentType _ = ""
 
+askLogger :: AppM Logger.Handle
+askLogger = asks hLogger
+
+askDbh :: AppM DB.Handle
+askDbh = asks hDatabase

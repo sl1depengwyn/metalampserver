@@ -22,6 +22,7 @@ import Universum
 -- | User type
 data UserT f = User
   { _uId :: Columnar f (SqlSerial Int),
+    _uName :: Columnar f Text,
     _uLogin :: Columnar f Text,
     _uPassword :: Columnar f Text,
     _uDateOfRegistration :: Columnar f UTCTime,
@@ -59,6 +60,7 @@ instance ToJSON (PrimaryKey UserT Identity) where
 
 User
   (LensFor userId)
+  (LensFor userName)
   (LensFor userLogin)
   (LensFor userPassword)
   (LensFor userRegDate)
@@ -258,6 +260,7 @@ migration () =
     <$> ( createTable "users" $
             User
               { _uId = field "id" serial notNull unique,
+                _uName = field "name" (varcharOf 64) notNull,
                 _uLogin = field "login" (varcharOf 64) notNull,
                 _uPassword = field "password" (varcharOf 64) notNull,
                 _uDateOfRegistration = field "registration_date" utctime notNull,

@@ -10,7 +10,7 @@ module Database.Migration.V001 where
 
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
-import Data.Time (UTCTime)
+import Data.Time.Calendar
 import Database.Beam
 import Database.Beam.Backend
 import Database.Beam.Backend.SQL.Types
@@ -21,11 +21,11 @@ import Universum
 
 -- | User type
 data UserT f = User
-  { _uId :: Columnar f (SqlSerial Int),
+  { _uId :: Columnar f (SqlSerial Int32),
     _uName :: Columnar f Text,
     _uLogin :: Columnar f Text,
     _uPassword :: Columnar f Text,
-    _uDateOfRegistration :: Columnar f UTCTime,
+    _uDateOfRegistration :: Columnar f Day,
     _uIsAdmin :: Columnar f Bool,
     _uCanCreate :: Columnar f Bool
   }
@@ -44,7 +44,7 @@ instance ToJSON User where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table UserT where
-  data PrimaryKey UserT f = UserId (Columnar f (SqlSerial Int))
+  data PrimaryKey UserT f = UserId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = UserId . _uId
 
@@ -69,7 +69,8 @@ User
 
 -- | Category type
 data CatT f = Cat
-  { _cId :: Columnar f (SqlSerial Int),
+  { _cId :: Columnar f (SqlSerial Int32),
+    _cName :: Columnar f Text,
     _cParent :: PrimaryKey CatT f
   }
   deriving (Generic, Beamable)
@@ -87,7 +88,7 @@ instance ToJSON Cat where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table CatT where
-  data PrimaryKey CatT f = CatId (Columnar f (SqlSerial Int))
+  data PrimaryKey CatT f = CatId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = CatId . _cId
 
@@ -103,13 +104,14 @@ instance ToJSON (PrimaryKey CatT Identity) where
 
 Cat
   (LensFor catId)
+  (LensFor catName)
   (CatId (LensFor catParent)) = tableLenses
 
 -- | News type
 data NewsT f = News
-  { _nId :: Columnar f (SqlSerial Int),
+  { _nId :: Columnar f (SqlSerial Int32),
     _nTitle :: Columnar f Text,
-    _nDateOfCreation :: Columnar f UTCTime,
+    _nDateOfCreation :: Columnar f Day,
     _nCreator :: PrimaryKey UserT f,
     _nCat :: PrimaryKey CatT f,
     _nText :: Columnar f Text,
@@ -130,7 +132,7 @@ instance ToJSON News where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table NewsT where
-  data PrimaryKey NewsT f = NewsId (Columnar f (SqlSerial Int))
+  data PrimaryKey NewsT f = NewsId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = NewsId . _nId
 
@@ -155,7 +157,7 @@ News
 
 -- Image type
 data ImageT f = Image
-  { _iId :: Columnar f (SqlSerial Int),
+  { _iId :: Columnar f (SqlSerial Int32),
     _iData :: Columnar f Text
   }
   deriving (Generic, Beamable)
@@ -173,7 +175,7 @@ instance ToJSON Image where
   toJSON = A.genericToJSON A.customOptions
 
 instance Table ImageT where
-  data PrimaryKey ImageT f = ImageId (Columnar f (SqlSerial Int))
+  data PrimaryKey ImageT f = ImageId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = ImageId . _iId
 
@@ -193,7 +195,7 @@ Image
 
 -- | Image to News type
 data ImageToNewsT f = ImageToNews
-  { _itnId :: Columnar f (SqlSerial Int),
+  { _itnId :: Columnar f (SqlSerial Int32),
     _itnImageId :: PrimaryKey ImageT f,
     _itnNewsId :: PrimaryKey NewsT f
   }
@@ -212,7 +214,7 @@ instance ToJSON ImageToNews where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
 
 instance Table ImageToNewsT where
-  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f (SqlSerial Int))
+  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = ImageToNewsId . _itnId
 
@@ -248,9 +250,6 @@ NewsDb
   (TableLens nImages)
   (TableLens nImagesToNews) = dbLenses
 
-utctime :: BeamSqlBackend be => DataType be UTCTime
-utctime = DataType (timestampType Nothing True)
-
 varcharOf :: BeamSqlBackend be => Word -> DataType be Text
 varcharOf n = varchar (Just n)
 
@@ -263,7 +262,7 @@ migration () =
                 _uName = field "name" (varcharOf 64) notNull,
                 _uLogin = field "login" (varcharOf 64) notNull,
                 _uPassword = field "password" (varcharOf 64) notNull,
-                _uDateOfRegistration = field "registration_date" utctime notNull,
+                _uDateOfRegistration = field "registration_date" date notNull,
                 _uIsAdmin = field "is_admin" boolean notNull,
                 _uCanCreate = field "can_create" boolean notNull
               }
@@ -271,6 +270,7 @@ migration () =
     <*> ( createTable "categories" $
             Cat
               { _cId = field "id" serial notNull unique,
+                _cName = field "name" (varcharOf 64) notNull,
                 _cParent = CatId (field "parent_id" serial notNull)
               }
         )
@@ -278,7 +278,7 @@ migration () =
             News
               { _nId = field "id" serial notNull unique,
                 _nTitle = field "title" (varcharOf 128) notNull,
-                _nDateOfCreation = field "creation_date" utctime notNull,
+                _nDateOfCreation = field "creation_date" date notNull,
                 _nCreator = UserId (field "creator_id" serial notNull),
                 _nCat = CatId (field "category_id" serial notNull),
                 _nText = field "text" (varchar Nothing) notNull,

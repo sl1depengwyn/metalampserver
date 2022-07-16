@@ -1,7 +1,7 @@
 module Main where
 
 import Universum
-import Lib
+import qualified Server.Main
 
 main :: IO ()
-main = someFunc
+main = Server.Main.main

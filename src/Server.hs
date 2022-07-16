@@ -38,6 +38,9 @@ withHandle ::
   IO ()
 withHandle c db logger f = f Handle {hConfig = c, hDatabase = db, hLogger = logger}
 
+run :: Handle -> IO ()
+run h = undefined
+
 
 type AppM = ReaderT Handle Handler
 

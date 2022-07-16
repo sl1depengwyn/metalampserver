@@ -1,11 +1,15 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Server.Main (main) where
 
-import Universum
 import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
+import qualified Data.Yaml as Yaml
 import qualified Database
 import qualified Logger
 import qualified Server
+import System.Environment
+import Universum
 
 data Config = Config
   { cDatabase :: Database.Config,
@@ -15,7 +19,7 @@ data Config = Config
   deriving (Show, Generic)
 
 instance FromJSON Config where
-  parseJSON = A.genericParseJSON A.customOptions
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 1)
 
 main :: IO ()
 main = do
@@ -29,22 +33,15 @@ run path = do
   errOrConfig <- Yaml.decodeFileEither path
   conf <- either (fail . show) pure errOrConfig
   let db = cDatabase conf
-  let bot = cBot conf
-  let logger = cLogger conf
-  let plotter = cPlotter conf
-  let toRun =
-        case Bot.cHost bot of
-          Bot.Tg _ -> Tg.run
+      logger = cLogger conf
+      server = cServer conf
   Logger.withHandle
     logger
-    ( \hLogger ->
-        Plotter.withHandle
-          plotter
-          ( \hPlotter ->
-              Database.withHandle
-                db
-                hLogger
-                ( \hDb -> Bot.withHandle bot hDb hLogger hPlotter toRun
-                )
+    ( \logh ->
+        Database.withHandle
+          db
+          logh
+          ( \dbh ->
+              Server.withHandle server dbh logh Server.run
           )
     )

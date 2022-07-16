@@ -1,10 +1,10 @@
 name:                metalampserver
 version:             0.1.0.0
-github:              "githubuser/metalampserver"
+github:              "sl1depengwyn/metalampserver"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2022 Author name here"
+author:              "Maxim Filonov"
+maintainer:          "max.pengwyn@gmail.com"
+copyright:           "2022 Maxim Filonov"
 
 extra-source-files:
 - README.md
@@ -29,6 +29,7 @@ dependencies:
 - microlens
 - aeson
 - aeson-extra
+- yaml
 - time
 - cryptonite
 - base64

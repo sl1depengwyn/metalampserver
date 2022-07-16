@@ -12,7 +12,7 @@ import qualified Data.Aeson.Extended as A
 import qualified Data.ByteString.Lazy as BSL (fromStrict)
 import Data.Time.Calendar
 import Database.Migration
-import qualified Database.News as DB
+import qualified Database as DB
 import qualified Logger
 import Servant
 import Servant.API.ContentTypes

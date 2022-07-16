@@ -17,6 +17,7 @@ import qualified Logger
 import Servant
 import Servant.API.ContentTypes
 import Universum hiding (Handle)
+--import Server.News
 
 data Config = Config {cPort :: Int, cToken :: Text} deriving (Show, Generic)
 
@@ -29,8 +30,6 @@ data Handle = Handle
     hLogger :: Logger.Handle
   }
 
-type AppM = ReaderT Handle Handler
-
 withHandle ::
   Config ->
   DB.Handle ->
@@ -38,6 +37,9 @@ withHandle ::
   (Handle -> IO ()) ->
   IO ()
 withHandle c db logger f = f Handle {hConfig = c, hDatabase = db, hLogger = logger}
+
+
+type AppM = ReaderT Handle Handler
 
 data WithCT = WithCT {header :: ByteString, content :: ByteString}
 
@@ -57,3 +59,6 @@ askLogger = asks hLogger
 
 askDbh :: AppM DB.Handle
 askDbh = asks hDatabase
+
+-- api :: Proxy NewsApi
+-- api = Proxy

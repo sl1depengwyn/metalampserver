@@ -67,7 +67,7 @@ withHandle config f =
 log :: FL.ToLogStr s => Handle -> Verbosity -> s -> IO ()
 log Handle {..} v x
   | v >= verbosity = FL.pushLogStrLn hLoggerSet $ FL.toLogStr x
-  | otherwise = return ()
+  | otherwise = pass
   where
     verbosity = fromMaybe Debug (cVerbosity hConfig)
 

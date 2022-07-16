@@ -1,6 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Database where
+module Database
+  ( withHandle,
+    module Database.News,
+    Handle(..),
+    Config
+  )
+where
 
 import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
@@ -11,6 +17,7 @@ import Database.Beam.Migrate.Simple
 import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 import Database.Migration
+import Database.News
 import qualified Database.PostgreSQL.Simple as PGS
 import Lens.Micro
 import qualified Logger

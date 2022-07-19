@@ -19,7 +19,7 @@ dropNotNullColumn ::
 dropNotNullColumn column = TableMigration $ do
   (TableName curSchema curNm, _) <- get
   tell [alterTableSyntax (tableName curSchema curNm) (alterColumnSyntax (columnMigrationFieldName column) setNullSyntax)]
-  pure column {columnMigrationFieldChecks = filter notNullConstraint (columnMigrationFieldChecks column)}
+  pure column {columnMigrationFieldChecks = filter (not . notNullConstraint) (columnMigrationFieldChecks column)}
   where
     qName = QualifiedName (Just "1") "1"
     notNullConstraint (FieldCheck f) = show (f qName "1") == "(TableColumnHasConstraint Postgres: Column QualifiedName (Just \"1\") \"1\".\"1\" has constraint NOT NULL)"

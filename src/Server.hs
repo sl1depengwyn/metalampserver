@@ -17,12 +17,13 @@ import qualified Logger
 import Servant
 import Servant.API.ContentTypes
 import Universum hiding (Handle)
+
 --import Server.News
 
-data Config = Config {cPort :: Int, cToken :: Text} deriving (Show, Generic)
+newtype Config = Config {cPort :: Int} deriving (Show, Generic)
 
 instance FromJSON Config where
-  parseJSON = A.genericParseJSON A.customOptions
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 1)
 
 data Handle = Handle
   { hConfig :: Config,
@@ -37,10 +38,6 @@ withHandle ::
   (Handle -> IO ()) ->
   IO ()
 withHandle c db logger f = f Handle {hConfig = c, hDatabase = db, hLogger = logger}
-
-run :: Handle -> IO ()
-run h = undefined
-
 
 type AppM = ReaderT Handle Handler
 
@@ -62,6 +59,3 @@ askLogger = asks hLogger
 
 askDbh :: AppM DB.Handle
 askDbh = asks hDatabase
-
--- api :: Proxy NewsApi
--- api = Proxy

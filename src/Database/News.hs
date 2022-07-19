@@ -89,8 +89,8 @@ queryToWhere NewsQueryParams {..} news =
 -- findAnywhere = maybe [] (\t -> [val_ t ==. news ^. newsText]) find
 --authorName = maybe (val_ True) (\a -> news ^. newsTitle `like_` ("%" <> a <> "%")) author
 
-getNews :: MonadBeam Postgres m => NewsQueryParams -> m [(News, User)]
-getNews params@NewsQueryParams {..} = runSelectReturningList $
+getNews' :: MonadBeam Postgres m => NewsQueryParams -> m [News]
+getNews' params@NewsQueryParams {..} = runSelectReturningList $
   select $ do
     news <- filter_ (queryToWhere params) (all_ (db ^. nNews))
     author <- related_ (db ^. nUsers) (_nCreator news)
@@ -106,6 +106,6 @@ getNews params@NewsQueryParams {..} = runSelectReturningList $
     whenJust authorName $ \(toTextEntry -> usernameToFind) ->
       guard_ (author ^. userName `like_` usernameToFind)
 
-    pure (news, author)
+    pure news
   where
     toTextEntry txt = val_ ("%" <> txt <> "%")

@@ -13,15 +13,18 @@ module Database.Migration.V002
   )
 where
 
+import Control.Monad.Writer.Strict
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
 import Data.Time.Calendar
 import Database.Beam
 import Database.Beam.Backend
+import Database.Beam.Backend.SQL.AST (TableName (..))
 import Database.Beam.Backend.SQL.Types
-import Database.Beam.Migrate
+import Database.Beam.Migrate.Extended
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Extensions.UuidOssp
+import qualified Database.Beam.Postgres.Migrate as PG
 import Database.Migration.V001 hiding
   ( Cat,
     CatId,
@@ -88,7 +91,7 @@ instance ToJSON Cat where
 instance Table CatT where
   data PrimaryKey CatT f = CatId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
-  primaryKey = Database.Migration.V002.CatId . Database.Migration.V002._cId
+  primaryKey = CatId . _cId
 
 deriving instance Show (PrimaryKey CatT (Nullable Identity))
 
@@ -113,7 +116,7 @@ instance ToJSON (PrimaryKey CatT Identity) where
 Cat
   (LensFor catId)
   (LensFor catName)
-  (Database.Migration.V002.CatId (LensFor catParent)) = tableLenses
+  (CatId (LensFor catParent)) = tableLenses
 
 -- | News type
 data NewsT f = News
@@ -142,7 +145,7 @@ instance ToJSON News where
 instance Table NewsT where
   data PrimaryKey NewsT f = NewsId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
-  primaryKey = Database.Migration.V002.NewsId . Database.Migration.V002._nId
+  primaryKey = NewsId . _nId
 
 deriving instance Show (PrimaryKey NewsT Identity)
 
@@ -159,7 +162,7 @@ News
   (LensFor newsTitle)
   (LensFor newsCreatedAt)
   (V001.UserId (LensFor newsCreator))
-  (Database.Migration.V002.CatId (LensFor newsCat))
+  (CatId (LensFor newsCat))
   (LensFor newsText)
   (LensFor isNewsPublished) = tableLenses
 
@@ -183,25 +186,38 @@ migration ::
   CheckedDatabaseSettings Postgres V001.NewsDb ->
   Migration Postgres (CheckedDatabaseSettings Postgres NewsDb)
 migration oldDb =
-  NewsDb
-    <$> preserve (oldDb ^. V001.nUsers)
-    <*> ( createTable "categories" $
-            Cat
-              { Database.Migration.V002._cId = field "id" serial notNull unique,
-                Database.Migration.V002._cName = field "name" (V001.varcharOf 64) notNull,
-                Database.Migration.V002._cParent = Database.Migration.V002.CatId (field "parent_id" (maybeType serial))
-              }
-        )
-    <*> ( createTable "news" $
-            News
-              { Database.Migration.V002._nId = field "id" serial notNull unique,
-                Database.Migration.V002._nTitle = field "title" (V001.varcharOf 128) notNull,
-                Database.Migration.V002._nDateOfCreation = field "creation_date" date notNull,
-                Database.Migration.V002._nCreator = V001.UserId (field "creator_id" serial notNull),
-                Database.Migration.V002._nCat = Database.Migration.V002.CatId (field "category_id" serial notNull),
-                Database.Migration.V002._nText = field "text" (varchar Nothing) notNull,
-                Database.Migration.V002._mIsPublished = field "is_published" boolean notNull
-              }
-        )
-    <*> preserve (oldDb ^. V001.nImages)
-    <*> preserve (oldDb ^. V001.nImagesToNews)
+  do
+    catsWithNoNotNull <- alterTable (oldDb ^. V001.nCats) $
+      \oldCats -> do
+        asd <- renameColumnTo "" (oldCats ^. V001.catParent)
+        nullableParent <- dropNotNullColumn (oldCats ^. V001.catParent)
+        pure $
+          Cat
+            { _cId = oldCats ^. V001.catId,
+              _cName = oldCats ^. V001.catName,
+              _cParent = CatId nullableParent
+            }
+    newNews <- alterTable (oldDb ^. V001.nNews) $
+      \oldNews -> do
+        pure $
+          News
+            { _nId = oldNews ^. V001.newsId,
+              _nTitle = oldNews ^. V001.newsTitle,
+              _nDateOfCreation = oldNews ^. V001.newsCreatedAt,
+              _nCreator = oldNews & V001._nCreator,
+              _nCat = CatId (oldNews ^. V001.newsCat),
+              _nText = oldNews ^. V001.newsText,
+              _mIsPublished = oldNews ^. V001.isNewsPublished
+            }
+    users <- preserve (oldDb ^. V001.nUsers)
+    news <- preserve (oldDb ^. V001.nNews)
+    images <- preserve (oldDb ^. V001.nImages)
+    imagesToNews <- preserve (oldDb ^. V001.nImagesToNews)
+    pure $
+      NewsDb
+        { _nUsers = users,
+          _nCats = catsWithNoNotNull,
+          _nNews = newNews,
+          _nImages = images,
+          _nImagesToNews = imagesToNews
+        }

@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Database
-  ( withHandle,
-    module Database.News,
-    Handle(..),
-    Config
+  ( module Database.News,
+    withHandle,
+    Handle (..),
+    Config,
+    getNews,
   )
 where
 
@@ -57,3 +59,6 @@ migrateDB h conn =
 
 runQuery :: Handle -> Pg b -> IO b
 runQuery h q = Pool.withResource (hPool h) $ \conn -> runBeamPostgresDebug (Logger.debug (hLogger h)) conn q
+
+getNews :: Handle -> NewsQueryParams -> IO [News]
+getNews h params = runQuery h (getNews' params)

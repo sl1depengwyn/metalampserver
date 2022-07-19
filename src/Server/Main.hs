@@ -8,6 +8,7 @@ import qualified Data.Yaml as Yaml
 import qualified Database
 import qualified Logger
 import qualified Server
+import qualified Server.Api as Api
 import System.Environment
 import Universum
 
@@ -42,6 +43,6 @@ run path = do
           db
           logh
           ( \dbh ->
-              Server.withHandle server dbh logh Server.run
+              Server.withHandle server dbh logh Api.startApp
           )
     )

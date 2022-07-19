@@ -2,8 +2,8 @@ module Data.Aeson.Extended
   ( module Data.Aeson,
     module Data.Aeson.Extra,
     module Data.Aeson.Types,
-    customOptions, 
-    customOptionsWithDrop
+    customOptions,
+    customOptionsWithDrop,
   )
 where
 

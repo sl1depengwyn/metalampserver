@@ -1,0 +1,8 @@
+database:
+  connection_string: "<inser your connection string according to postgresql documentation https://www.postgresql.org/docs/9.5/libpq-connect.html#LIBPQ-CONNSTRING>"
+
+server:
+  port: 8080
+
+logger:
+  verbosity: debug

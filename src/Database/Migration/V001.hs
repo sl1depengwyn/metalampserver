@@ -6,8 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Database.Migration.V001 
-where
+module Database.Migration.V001 where
 
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
@@ -251,18 +250,15 @@ NewsDb
   (TableLens nImages)
   (TableLens nImagesToNews) = dbLenses
 
-varcharOf :: BeamSqlBackend be => Word -> DataType be Text
-varcharOf n = varchar (Just n)
-
 migration :: () -> Migration Postgres (CheckedDatabaseSettings Postgres NewsDb)
 migration () =
   NewsDb
     <$> ( createTable "users" $
             User
               { _uId = field "id" serial notNull unique,
-                _uName = field "name" (varcharOf 64) notNull,
-                _uLogin = field "login" (varcharOf 64) notNull,
-                _uPassword = field "password" (varcharOf 64) notNull,
+                _uName = field "name" text notNull,
+                _uLogin = field "login" text notNull,
+                _uPassword = field "password" text notNull,
                 _uDateOfRegistration = field "registration_date" date notNull,
                 _uIsAdmin = field "is_admin" boolean notNull,
                 _uCanCreate = field "can_create" boolean notNull
@@ -271,14 +267,14 @@ migration () =
     <*> ( createTable "categories" $
             Cat
               { _cId = field "id" serial notNull unique,
-                _cName = field "name" (varcharOf 64) notNull,
+                _cName = field "name" text notNull,
                 _cParent = CatId (field "parent_id" serial notNull)
               }
         )
     <*> ( createTable "news" $
             News
               { _nId = field "id" serial notNull unique,
-                _nTitle = field "title" (varcharOf 128) notNull,
+                _nTitle = field "title" text notNull,
                 _nDateOfCreation = field "creation_date" date notNull,
                 _nCreator = UserId (field "creator_id" serial notNull),
                 _nCat = CatId (field "category_id" serial notNull),

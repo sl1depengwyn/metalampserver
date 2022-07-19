@@ -27,13 +27,14 @@ library
   exposed-modules:
       Data.Aeson.Extended
       Database
+      Database.Beam.Migrate.Extended
       Database.Migration
       Database.Migration.V001
       Database.Migration.V002
       Database.News
-      Lib
       Logger
       Server
+      Server.Api
       Server.Main
       Server.News
   other-modules:
@@ -54,10 +55,12 @@ library
     , cryptonite
     , fast-logger
     , microlens
+    , mtl
     , postgresql-simple
     , resource-pool
     , servant
     , servant-server
+    , text
     , time
     , universum
     , wai
@@ -87,10 +90,12 @@ executable metalampserver-exe
     , fast-logger
     , metalampserver
     , microlens
+    , mtl
     , postgresql-simple
     , resource-pool
     , servant
     , servant-server
+    , text
     , time
     , universum
     , wai
@@ -121,10 +126,12 @@ test-suite metalampserver-test
     , fast-logger
     , metalampserver
     , microlens
+    , mtl
     , postgresql-simple
     , resource-pool
     , servant
     , servant-server
+    , text
     , time
     , universum
     , wai

@@ -62,7 +62,7 @@ migrateDB h conn =
 runQuery :: Handle -> Pg b -> IO b
 runQuery h q = Pool.withResource (hPool h) $ \conn -> runBeamPostgresDebug (Logger.debug (hLogger h)) conn q
 
-getNews :: Handle -> Integer -> Integer -> NewsQueryParams -> IO [News]
+getNews :: Handle -> Integer -> Integer -> NewsQueryParams -> IO [(News, User, Cat)]
 getNews h limit offset params = runQuery h (paginated getNews' limit offset params)
 
 paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f

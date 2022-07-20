@@ -3,6 +3,7 @@ database:
 
 server:
   port: 8080
+  limit: 20 #default sql limit for all paginated endpoints
 
 logger:
   verbosity: debug

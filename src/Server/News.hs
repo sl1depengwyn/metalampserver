@@ -34,15 +34,21 @@ type NewsApi =
     :> QueryParam "text" Text
     :> QueryParam "find" Text -- looking for news with this string in either news text, title or category
     :> QueryParam "sort_by" Db.Sorting
+    :> QueryParam "sort_order" Db.SortOrder
     :> QueryParam "limit" Integer
     :> QueryParam "offset" Integer
-    :> Get '[JSON] [News]
+    :> Get '[JSON] [(News, User, Cat)]
 
 instance FromHttpApiData Db.Sorting where
-  parseQueryParam (toLower -> "date") = Right Db.Date
-  parseQueryParam (toLower -> "author") = Right Db.Author
-  parseQueryParam (toLower -> "cat") = Right Db.Cat
-  parseQueryParam (toLower -> "images") = Right Db.Images
+  parseQueryParam (toLower -> "date") = Right Db.ByDate
+  parseQueryParam (toLower -> "author") = Right Db.ByAuthor
+  parseQueryParam (toLower -> "cat") = Right Db.ByCat
+  parseQueryParam (toLower -> "images") = Right Db.ByNoImages
+  parseQueryParam val = Left ("unknown value " <> val)
+
+instance FromHttpApiData Db.SortOrder where
+  parseQueryParam (toLower -> "asc") = Right Db.Asc
+  parseQueryParam (toLower -> "desc") = Right Db.Desc
   parseQueryParam val = Left ("unknown value " <> val)
 
 handleNews ::
@@ -55,9 +61,10 @@ handleNews ::
   Maybe Text ->
   Maybe Text ->
   Maybe Db.Sorting ->
+  Maybe Db.SortOrder ->
   Maybe Integer ->
   Maybe Integer ->
-  AppM [News]
+  AppM [(News, User, Cat)]
 handleNews
   createdAt
   createdUntil
@@ -68,6 +75,7 @@ handleNews
   text
   find
   sortBy
+  sortOrder
   limit'
   offset' = do
     dbh <- askDbh

@@ -1,6 +1,12 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Server.Api where
 
 import qualified Database as DB
+import GHC.Base (Symbol)
 import Network.Wai.Handler.Warp
 import Servant
 import Server

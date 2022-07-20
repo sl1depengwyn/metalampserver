@@ -14,7 +14,7 @@ import qualified Data.Aeson.Extended as A
 import qualified Data.ByteString.Lazy as BSL (fromStrict)
 import Data.Text (toLower)
 import Data.Time.Calendar
-import qualified Database as DB
+import qualified Database as Db
 import Database.Migration
 import qualified Logger
 import Servant
@@ -24,7 +24,8 @@ import Universum hiding (Handle)
 import Universum.String.Reexport
 
 type NewsApi =
-  "news" :> QueryParam "created_at" Day
+  "news"
+    :> QueryParam "created_at" Day
     :> QueryParam "created_until" Day
     :> QueryParam "created_since" Day
     :> QueryParam "author" Text
@@ -32,15 +33,17 @@ type NewsApi =
     :> QueryParam "title" Text
     :> QueryParam "text" Text
     :> QueryParam "find" Text -- looking for news with this string in either news text, title or category
-    :> QueryParam "sort_by" DB.Sorting
+    :> QueryParam "sort_by" Db.Sorting
+    :> QueryParam "limit" Integer
+    :> QueryParam "offset" Integer
     :> Get '[JSON] [News]
 
-instance FromHttpApiData DB.Sorting where
-  parseQueryParam (toLower -> "date") = Right DB.Date
-  parseQueryParam (toLower -> "author") = Right DB.Author
-  parseQueryParam (toLower -> "cat") = Right DB.Cat
-  parseQueryParam (toLower -> "images") = Right DB.Images
-  parseQueryParam val = Left ("unknown value" <> val)
+instance FromHttpApiData Db.Sorting where
+  parseQueryParam (toLower -> "date") = Right Db.Date
+  parseQueryParam (toLower -> "author") = Right Db.Author
+  parseQueryParam (toLower -> "cat") = Right Db.Cat
+  parseQueryParam (toLower -> "images") = Right Db.Images
+  parseQueryParam val = Left ("unknown value " <> val)
 
 handleNews ::
   Maybe Day ->
@@ -51,7 +54,9 @@ handleNews ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe DB.Sorting ->
+  Maybe Db.Sorting ->
+  Maybe Integer ->
+  Maybe Integer ->
   AppM [News]
 handleNews
   createdAt
@@ -62,6 +67,11 @@ handleNews
   title
   text
   find
-  sortBy = do
+  sortBy
+  limit'
+  offset' = do
     dbh <- askDbh
-    liftIO $ DB.getNews dbh (DB.NewsQueryParams {..})
+    def <- askLimit
+    let limit = limitFromMaybe def limit'
+        offset = offsetFromMaybe offset'
+    liftIO $ Db.getNews dbh limit offset (Db.NewsQueryParams {..})

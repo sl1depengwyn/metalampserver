@@ -13,9 +13,9 @@ import System.Environment
 import Universum
 
 data Config = Config
-  { cDatabase :: Database.Config,
-    cLogger :: Logger.Config,
-    cServer :: Server.Config
+  { cDatabase :: Database.Config
+  , cLogger :: Logger.Config
+  , cServer :: Server.Config
   }
   deriving (Show, Generic)
 

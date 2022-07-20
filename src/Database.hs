@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Database
@@ -14,6 +15,7 @@ import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
 import qualified Data.Pool as Pool
 import Data.Time.Calendar
+import Database.Beam
 import Database.Beam.Migrate
 import Database.Beam.Migrate.Simple
 import Database.Beam.Postgres
@@ -60,5 +62,7 @@ migrateDB h conn =
 runQuery :: Handle -> Pg b -> IO b
 runQuery h q = Pool.withResource (hPool h) $ \conn -> runBeamPostgresDebug (Logger.debug (hLogger h)) conn q
 
-getNews :: Handle -> NewsQueryParams -> IO [News]
-getNews h params = runQuery h (getNews' params)
+getNews :: Handle -> Integer -> Integer -> NewsQueryParams -> IO [News]
+getNews h limit offset params = runQuery h (paginated getNews' limit offset params)
+
+paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
@@ -11,8 +12,9 @@ import Data.Aeson.Extended (FromJSON)
 import qualified Data.Aeson.Extended as A
 import qualified Data.ByteString.Lazy as BSL (fromStrict)
 import Data.Time.Calendar
-import qualified Database as DB
+import qualified Database as Db
 import Database.Migration
+import GHC.Base (Symbol)
 import qualified Logger
 import Servant
 import Servant.API.ContentTypes
@@ -20,20 +22,20 @@ import Universum hiding (Handle)
 
 --import Server.News
 
-newtype Config = Config {cPort :: Int} deriving (Show, Generic)
+data Config = Config {cPort :: Int, cLimit :: Integer} deriving (Show, Generic)
 
 instance FromJSON Config where
   parseJSON = A.genericParseJSON (A.customOptionsWithDrop 1)
 
 data Handle = Handle
   { hConfig :: Config,
-    hDatabase :: DB.Handle,
+    hDatabase :: Db.Handle,
     hLogger :: Logger.Handle
   }
 
 withHandle ::
   Config ->
-  DB.Handle ->
+  Db.Handle ->
   Logger.Handle ->
   (Handle -> IO ()) ->
   IO ()
@@ -57,5 +59,23 @@ instance Accept IMAGE where
 askLogger :: AppM Logger.Handle
 askLogger = asks hLogger
 
-askDbh :: AppM DB.Handle
+askDbh :: AppM Db.Handle
 askDbh = asks hDatabase
+
+askLimit :: AppM Integer
+askLimit = asks (cLimit . hConfig)
+
+limitFromMaybe :: Integer -> Maybe Integer -> Integer
+limitFromMaybe def limit
+  | defOrLimit > def = def
+  | defOrLimit < 0 = 0
+  | otherwise = defOrLimit
+  where
+    defOrLimit = fromMaybe def limit
+
+offsetFromMaybe :: Maybe Integer -> Integer
+offsetFromMaybe offset
+  | defOrOffset < 0 = 0
+  | otherwise = defOrOffset
+  where
+    defOrOffset = fromMaybe 0 offset

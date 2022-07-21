@@ -8,6 +8,7 @@ module Database
     Handle (..),
     Config,
     getNews,
+    getUser,
   )
 where
 
@@ -23,6 +24,7 @@ import qualified Database.Beam.Postgres.Migrate as PG
 import Database.Migration
 import Database.News
 import qualified Database.PostgreSQL.Simple as PGS
+import Database.Users
 import Lens.Micro
 import qualified Logger
 import Universum hiding (Handle)
@@ -64,5 +66,8 @@ runQuery h q = Pool.withResource (hPool h) $ \conn -> runBeamPostgresDebug (Logg
 
 getNews :: Handle -> Integer -> Integer -> NewsQueryParams -> IO [(News, User, Cat)]
 getNews h limit offset params = runQuery h (paginated getNews' limit offset params)
+
+getUser :: Handle -> Text -> IO (Maybe User)
+getUser h login = runQuery h (runSelectReturningOne (select (getUser' login)))
 
 paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f

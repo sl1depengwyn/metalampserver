@@ -28,7 +28,6 @@ import Database.Beam.Migrate.Types
   )
 import Database.Beam.Postgres (Postgres)
 import qualified Database.Migration.V001 as V001 (migration)
-import Database.Migration.V002 (UserT)
 import Database.Migration.V002 hiding (migration)
 import qualified Database.Migration.V002 as V002 (migration)
 import Universum

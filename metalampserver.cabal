@@ -28,10 +28,12 @@ library
       Data.Aeson.Extended
       Database
       Database.Beam.Migrate.Extended
+      Database.Cats
       Database.Migration
       Database.Migration.V001
       Database.Migration.V002
       Database.News
+      Database.Users
       Logger
       Server
       Server.Api

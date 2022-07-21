@@ -20,8 +20,10 @@ import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 import Database.Beam.Query.CTE (QAnyScope)
 import Database.Beam.Query.Internal
+import Database.Cats
 import Database.Migration
 import qualified Database.PostgreSQL.Simple as PGS
+import Database.Users
 import Lens.Micro
 import qualified Logger
 import Universum hiding (Handle, sortBy)
@@ -53,23 +55,17 @@ data PostToReturn = PostToReturn
   { ptrId :: Int32,
     ptrTitle :: Text,
     ptrDateOfCreation :: Day,
-    ptrCreator :: User,
+    ptrCreator :: UserToReturn,
     ptrCat :: CatToReturn,
     ptrText :: Text,
     ptrIsPublished :: Bool
   }
   deriving (Show, Generic)
 
+instance FromJSON PostToReturn where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 3)
+
 instance ToJSON PostToReturn where
-  toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
-
-data CatToReturn = CatToReturn
-  { ctrId :: Int32,
-    ctrParent :: CatToReturn
-  }
-  deriving (Show, Generic)
-
-instance ToJSON CatToReturn where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
 
 postToReturn :: News -> User -> CatToReturn -> PostToReturn
@@ -78,7 +74,7 @@ postToReturn news user cat =
     { ptrId = unSerial (news ^. newsId),
       ptrTitle = news ^. newsTitle,
       ptrDateOfCreation = news ^. newsCreatedAt,
-      ptrCreator = user,
+      ptrCreator = userToReturn user,
       ptrCat = cat,
       ptrText = news ^. newsText,
       ptrIsPublished = news ^. isNewsPublished

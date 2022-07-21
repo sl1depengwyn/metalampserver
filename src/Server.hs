@@ -22,7 +22,11 @@ import Universum hiding (Handle)
 
 --import Server.News
 
-data Config = Config {cPort :: Int, cLimit :: Integer} deriving (Show, Generic)
+data Config = Config
+  { cPort :: Int,
+    cLimit :: Integer
+  }
+  deriving (Show, Generic)
 
 instance FromJSON Config where
   parseJSON = A.genericParseJSON (A.customOptionsWithDrop 1)

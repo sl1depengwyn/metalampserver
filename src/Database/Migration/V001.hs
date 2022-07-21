@@ -195,8 +195,7 @@ Image
 
 -- | Image to News type
 data ImageToNewsT f = ImageToNews
-  { _itnId :: Columnar f (SqlSerial Int32),
-    _itnImageId :: PrimaryKey ImageT f,
+  { _itnImageId :: PrimaryKey ImageT f,
     _itnNewsId :: PrimaryKey NewsT f
   }
   deriving (Generic, Beamable)
@@ -214,9 +213,9 @@ instance ToJSON ImageToNews where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
 
 instance Table ImageToNewsT where
-  data PrimaryKey ImageToNewsT f = ImageToNewsId (Columnar f (SqlSerial Int32))
+  data PrimaryKey ImageToNewsT f = ImageToNewsId (PrimaryKey ImageT f) (PrimaryKey NewsT f)
     deriving (Generic, Beamable)
-  primaryKey = ImageToNewsId . _itnId
+  primaryKey = ImageToNewsId <$> _itnImageId <*> _itnNewsId
 
 deriving instance Show (PrimaryKey ImageToNewsT Identity)
 
@@ -229,7 +228,6 @@ instance ToJSON (PrimaryKey ImageToNewsT Identity) where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
 
 ImageToNews
-  (LensFor itnId)
   (ImageId (LensFor itnImageId))
   (NewsId (LensFor itnNewsId)) = tableLenses
 
@@ -290,8 +288,7 @@ migration () =
         )
     <*> ( createTable "image_to_news" $
             ImageToNews
-              { _itnId = field "id" serial notNull unique,
-                _itnImageId = ImageId (field "image_id" serial notNull),
+              { _itnImageId = ImageId (field "image_id" serial notNull),
                 _itnNewsId = NewsId (field "news_id" serial notNull)
               }
         )

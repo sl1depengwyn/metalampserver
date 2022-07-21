@@ -48,4 +48,4 @@ checkBasicAuth h = BasicAuthCheck $ \basicAuthData -> do
     (Just user) ->
       if validatePassword password (encodeUtf8 @Text @ByteString (user ^. userPassword))
         then pure (Authorized (Just user))
-        else pure (Authorized Nothing)
+        else pure BadPassword

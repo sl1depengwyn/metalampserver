@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -17,12 +18,13 @@ import Database.Beam.Backend
 import Database.Beam.Migrate
 import Database.Beam.Migrate.Simple
 import Database.Beam.Postgres
-import qualified Database.Beam.Postgres.Migrate as PG
+import Database.Beam.Postgres.Full (lateral_)
+import qualified Database.Beam.Postgres.Migrate as Pg
 import Database.Beam.Query.CTE (QAnyScope)
 import Database.Beam.Query.Internal
 import Database.Cats
 import Database.Migration
-import qualified Database.PostgreSQL.Simple as PGS
+import qualified Database.PostgreSQL.Simple as Pgs
 import Database.Users
 import Lens.Micro
 import qualified Logger
@@ -83,8 +85,11 @@ postToReturn news user cat =
 toTextEntry :: (SqlValable a, HaskellLiteralForQExpr a ~ Text) => Text -> a
 toTextEntry txt = val_ ("%" <> txt <> "%")
 
-queryToWhere :: NewsQueryParams -> NewsT (QExpr Postgres scope) -> QExpr Postgres scope Bool
-queryToWhere NewsQueryParams {..} news =
+newsImages :: Q Postgres NewsDb s (NewsT (QExpr Postgres s), ImageT (QExpr Postgres s))
+newsImages = manyToMany_ (db ^. nImagesToNews) _itnNewsId _itnImageId (all_ (db ^. nNews)) (all_ (db ^. nImages))
+
+queryToWhere :: NewsQueryParams -> (NewsT (QExpr Postgres scope), a) -> QExpr Postgres scope Bool
+queryToWhere NewsQueryParams {..} (news, _) =
   case mconcat [dateAt, dateUntil, dateSince, catId, titleText, textEntry] of
     x : xs -> foldr1 (&&.) (x :| xs)
     _ -> val_ True
@@ -101,7 +106,7 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
   where
     query :: Q Postgres NewsDb s (NewsT (QExpr Postgres s), UserT (QExpr Postgres s), CatT (QExpr Postgres s))
     query = do
-      news <- filter_ (queryToWhere params) (all_ (db ^. nNews))
+      (news, image) <- filter_ (queryToWhere params) newsImages
       author <- related_ (db ^. nUsers) (_nCreator news)
       cat <- related_ (db ^. nCats) (_nCat news)
 
@@ -116,7 +121,6 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
         guard_ (author ^. userName `like_` val_ usernameToFind)
 
       pure (news, author, cat)
-
     order :: QExpr Postgres s a -> QOrd Postgres s a
     order = case sortOrder of
       Just Desc -> desc_
@@ -128,11 +132,14 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
       ByCat -> orderBy_ (\(n, a, c) -> order (c ^. catName)) query
       ByNoImages -> orderBy_ (\(n, a, c) -> order (n ^. newsCreatedAt)) query -- TODO replace with appropriate comprarison
 
-query :: NewsQueryParams -> Q Postgres NewsDb s (NewsT (QExpr Postgres s), UserT (QExpr Postgres s), CatT (QExpr Postgres s))
-query params@NewsQueryParams {..} = do
-  news <- filter_ (queryToWhere params) (all_ (db ^. nNews))
+--querytest :: NewsQueryParams -> Q Postgres NewsDb s (NewsT (QExpr Postgres s), UserT (QExpr Postgres s), CatT (QExpr Postgres s))
+--query :: NewsQueryParams -> Q Postgres NewsDb s (NewsT (QExpr Postgres s), UserT (QExpr Postgres s), CatT (QExpr Postgres s))
+queryTest :: NewsQueryParams -> Q Postgres NewsDb s (NewsT (QExpr Postgres s), UserT (QExpr Postgres s), CatT (QExpr Postgres s), QExpr Postgres s Int32, ImageT (QExpr Postgres s))
+queryTest params@NewsQueryParams {..} = do
+  (news, image) <- filter_ (queryToWhere params) newsImages
   author <- related_ (db ^. nUsers) (_nCreator news)
   cat <- related_ (db ^. nCats) (_nCat news)
+  (_, imgCnt) <- filter_ (\(itn, _) -> itn ==. news ^. newsId) (aggregate_ (\itn -> (group_ (itn ^. itnNewsId), as_ @Int32 (count_ (itn ^. itnImageId)))) (all_ (db ^. nImagesToNews)))
 
   whenJust text $ \(toTextEntry -> text) ->
     guard_
@@ -144,4 +151,4 @@ query params@NewsQueryParams {..} = do
   whenJust authorName $ \usernameToFind ->
     guard_ (author ^. userName `like_` val_ usernameToFind)
 
-  pure (news, author, cat)
+  pure (news, author, cat, imgCnt, image)

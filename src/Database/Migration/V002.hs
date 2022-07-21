@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -29,6 +30,9 @@ import Database.Migration.V001 hiding
   ( Cat,
     CatId,
     CatT,
+    ImageToNews,
+    ImageToNewsId,
+    ImageToNewsT,
     News,
     NewsDb,
     NewsId,
@@ -37,6 +41,8 @@ import Database.Migration.V001 hiding
     catName,
     catParent,
     isNewsPublished,
+    itnImageId,
+    itnNewsId,
     migration,
     nCats,
     nImages,
@@ -52,6 +58,8 @@ import Database.Migration.V001 hiding
     _cId,
     _cName,
     _cParent,
+    _itnImageId,
+    _itnNewsId,
     _mIsPublished,
     _nCat,
     _nCats,
@@ -166,12 +174,50 @@ News
   (LensFor newsText)
   (LensFor isNewsPublished) = tableLenses
 
+-- | Image to News type
+data ImageToNewsT f = ImageToNews
+  { _itnImageId :: PrimaryKey ImageT f,
+    _itnNewsId :: PrimaryKey NewsT f
+  }
+  deriving (Generic, Beamable)
+
+type ImageToNews = ImageToNewsT Identity
+
+deriving instance Show ImageToNews
+
+deriving instance Eq ImageToNews
+
+instance FromJSON ImageToNews where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 4)
+
+instance ToJSON ImageToNews where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
+
+instance Table ImageToNewsT where
+  data PrimaryKey ImageToNewsT f = ImageToNewsId (PrimaryKey ImageT f) (PrimaryKey NewsT f)
+    deriving (Generic, Beamable)
+  primaryKey = ImageToNewsId <$> _itnImageId <*> _itnNewsId
+
+deriving instance Show (PrimaryKey ImageToNewsT Identity)
+
+deriving instance Eq (PrimaryKey ImageToNewsT Identity)
+
+instance FromJSON (PrimaryKey ImageToNewsT Identity) where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 4)
+
+instance ToJSON (PrimaryKey ImageToNewsT Identity) where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 4)
+
+ImageToNews
+  (ImageId (LensFor itnImageId))
+  (NewsId (LensFor itnNewsId)) = tableLenses
+
 data NewsDb f = NewsDb
   { _nUsers :: f (TableEntity V001.UserT),
     _nCats :: f (TableEntity CatT),
     _nNews :: f (TableEntity NewsT),
     _nImages :: f (TableEntity V001.ImageT),
-    _nImagesToNews :: f (TableEntity V001.ImageToNewsT)
+    _nImagesToNews :: f (TableEntity ImageToNewsT)
   }
   deriving (Generic, Database Postgres)
 
@@ -181,6 +227,12 @@ NewsDb
   (TableLens nNews)
   (TableLens nImages)
   (TableLens nImagesToNews) = dbLenses
+
+retable ::
+  Table tbl =>
+  CheckedDatabaseEntity Postgres db (TableEntity tbl) ->
+  Migration Postgres (CheckedDatabaseEntity Postgres db' (TableEntity tbl))
+retable t = alterTable t pure
 
 migration ::
   CheckedDatabaseSettings Postgres V001.NewsDb ->
@@ -198,26 +250,23 @@ migration oldDb =
               _cParent = CatId nullableParent
             }
     newNews <- alterTable (oldDb ^. V001.nNews) $
-      \oldNews -> do
+      \oldNews@V001.News {..} -> do
         pure $
-          News
-            { _nId = oldNews ^. V001.newsId,
-              _nTitle = oldNews ^. V001.newsTitle,
-              _nDateOfCreation = oldNews ^. V001.newsCreatedAt,
-              _nCreator = oldNews & V001._nCreator,
-              _nCat = CatId (oldNews ^. V001.newsCat),
-              _nText = oldNews ^. V001.newsText,
-              _mIsPublished = oldNews ^. V001.isNewsPublished
-            }
+          News {_nCat = CatId (oldNews ^. V001.newsCat), ..}
+    newImagesToNews <- alterTable (oldDb ^. V001.nImagesToNews) $ \olditn ->
+      pure $
+        ImageToNews
+          { _itnImageId = ImageId (olditn ^. V001.itnImageId),
+            _itnNewsId = NewsId (olditn ^. V001.itnNewsId)
+          }
     users <- preserve (oldDb ^. V001.nUsers)
     news <- preserve (oldDb ^. V001.nNews)
     images <- preserve (oldDb ^. V001.nImages)
-    imagesToNews <- preserve (oldDb ^. V001.nImagesToNews)
     pure $
       NewsDb
         { _nUsers = users,
           _nCats = catsWithNoNotNull,
           _nNews = newNews,
           _nImages = images,
-          _nImagesToNews = imagesToNews
+          _nImagesToNews = newImagesToNews
         }

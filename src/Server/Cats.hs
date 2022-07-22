@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Database.Cats where
+module Server.Cats where
 
 import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
@@ -26,3 +26,15 @@ import Database.Users
 import Lens.Micro
 import qualified Logger
 import Universum hiding (Handle, sortBy)
+
+data CatToReturn = CatToReturn
+  { ctrId :: Int32,
+    ctrParent :: CatToReturn
+  }
+  deriving (Show, Generic)
+
+instance FromJSON CatToReturn where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 3)
+
+instance ToJSON CatToReturn where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 3)

@@ -53,35 +53,6 @@ data NewsQueryParams = NewsQueryParams
     sortOrder :: Maybe SortOrder
   }
 
-data PostToReturn = PostToReturn
-  { ptrId :: Int32,
-    ptrTitle :: Text,
-    ptrDateOfCreation :: Day,
-    ptrCreator :: UserToReturn,
-    ptrCat :: CatToReturn,
-    ptrText :: Text,
-    ptrIsPublished :: Bool
-  }
-  deriving (Show, Generic)
-
-instance FromJSON PostToReturn where
-  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 3)
-
-instance ToJSON PostToReturn where
-  toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
-
-postToReturn :: News -> User -> CatToReturn -> PostToReturn
-postToReturn news user cat =
-  PostToReturn
-    { ptrId = unSerial (news ^. newsId),
-      ptrTitle = news ^. newsTitle,
-      ptrDateOfCreation = news ^. newsCreatedAt,
-      ptrCreator = userToReturn user,
-      ptrCat = cat,
-      ptrText = news ^. newsText,
-      ptrIsPublished = news ^. isNewsPublished
-    }
-
 toTextEntry :: (SqlValable a, HaskellLiteralForQExpr a ~ Text) => Text -> a
 toTextEntry txt = val_ ("%" <> txt <> "%")
 

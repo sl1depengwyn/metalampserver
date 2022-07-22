@@ -9,17 +9,20 @@
 
 module Server.News where
 
-import Data.Aeson.Extended (FromJSON)
+import Data.Aeson.Extended (FromJSON, ToJSON)
 import qualified Data.Aeson.Extended as A
 import qualified Data.ByteString.Lazy as BSL (fromStrict)
 import Data.Text (toLower)
 import Data.Time.Calendar
 import qualified Database as Db
+import Database.Beam.Backend (unSerial)
 import Database.Migration
 import qualified Logger
 import Servant
 import Servant.API.ContentTypes
 import Server
+import Server.Cats
+import Server.Users
 import Universum hiding (Handle)
 import Universum.String.Reexport
 
@@ -44,12 +47,41 @@ instance FromHttpApiData Db.Sorting where
   parseQueryParam (toLower -> "author") = Right Db.ByAuthor
   parseQueryParam (toLower -> "cat") = Right Db.ByCat
   parseQueryParam (toLower -> "images") = Right Db.ByNoImages
-  parseQueryParam val = Left ("unknown value " <> val)
+  parseQueryParam val = Left ("unknown value for sorting " <> val)
 
 instance FromHttpApiData Db.SortOrder where
   parseQueryParam (toLower -> "asc") = Right Db.Asc
   parseQueryParam (toLower -> "desc") = Right Db.Desc
-  parseQueryParam val = Left ("unknown value " <> val)
+  parseQueryParam val = Left ("unknown value for sorting order" <> val)
+
+data PostToReturn = PostToReturn
+  { ptrId :: Int32,
+    ptrTitle :: Text,
+    ptrDateOfCreation :: Day,
+    ptrCreator :: UserToReturn,
+    ptrCat :: CatToReturn,
+    ptrText :: Text,
+    ptrIsPublished :: Bool
+  }
+  deriving (Show, Generic)
+
+instance FromJSON PostToReturn where
+  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 3)
+
+instance ToJSON PostToReturn where
+  toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
+
+postToReturn :: News -> User -> CatToReturn -> PostToReturn
+postToReturn news user cat =
+  PostToReturn
+    { ptrId = unSerial (news ^. newsId),
+      ptrTitle = news ^. newsTitle,
+      ptrDateOfCreation = news ^. newsCreatedAt,
+      ptrCreator = userToReturn user,
+      ptrCat = cat,
+      ptrText = news ^. newsText,
+      ptrIsPublished = news ^. isNewsPublished
+    }
 
 handleNews ::
   Maybe Day ->

@@ -37,8 +37,10 @@ library
       Logger
       Server
       Server.Api
+      Server.Cats
       Server.Main
       Server.News
+      Server.Users
   other-modules:
       Paths_metalampserver
   hs-source-dirs:

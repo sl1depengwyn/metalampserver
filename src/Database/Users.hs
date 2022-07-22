@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module Database.Users where
 
 import Data.Aeson.Extended (FromJSON, ToJSON)
@@ -19,21 +20,6 @@ import qualified Database.PostgreSQL.Simple as PGS
 import Lens.Micro
 import qualified Logger
 import Universum hiding (Handle, sortBy)
-
-data UserToReturn = UserToReturn {
-    utrName :: Text,
-    utrDateOfRegistration :: Day
-} deriving (Show, Generic)
-
-instance FromJSON UserToReturn where
-  parseJSON = A.genericParseJSON (A.customOptionsWithDrop 3)
-
-instance ToJSON UserToReturn where
-  toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
-
-
-userToReturn :: User -> UserToReturn
-userToReturn u = UserToReturn {utrName = u ^. userName, utrDateOfRegistration = u ^. userRegDate}
 
 getUser' :: Text -> Q Postgres NewsDb s (UserT (QExpr Postgres s))
 getUser' login = filter_ (\user -> user ^. userLogin ==. val_ login) (all_ (db ^. nUsers))

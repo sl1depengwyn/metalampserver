@@ -4,11 +4,13 @@
 
 module Database
   ( module Database.News,
+    module Database.Users,
     withHandle,
     Handle (..),
     Config,
     getNews,
     getUser,
+    addUser
   )
 where
 
@@ -69,5 +71,8 @@ getNews h limit offset params = runQuery h (paginated getNews' limit offset para
 
 getUser :: Handle -> Text -> IO (Maybe User)
 getUser h login = runQuery h (runSelectReturningOne (select (getUser' login)))
+
+addUser :: Handle -> NewUser -> IO ()
+addUser h user = runQuery h (addUser' user)
 
 paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f

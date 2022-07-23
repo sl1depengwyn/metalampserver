@@ -24,7 +24,8 @@ import Universum hiding (Handle)
 
 data Config = Config
   { cPort :: Int,
-    cLimit :: Integer
+    cLimit :: Maybe Integer,
+    cHashCost :: Maybe Int
   }
   deriving (Show, Generic)
 
@@ -60,6 +61,9 @@ instance MimeRender IMAGE ByteString where
 instance Accept IMAGE where
   contentType _ = ""
 
+askMbValue :: a -> (Handle -> Maybe a) -> AppM a
+askMbValue def f = fromMaybe def <$> asks f
+
 askLogger :: AppM Logger.Handle
 askLogger = asks hLogger
 
@@ -67,7 +71,10 @@ askDbh :: AppM Db.Handle
 askDbh = asks hDatabase
 
 askLimit :: AppM Integer
-askLimit = asks (cLimit . hConfig)
+askLimit = askMbValue 20 (cLimit . hConfig)
+
+askCost :: AppM Int
+askCost = askMbValue 12 (cHashCost . hConfig)
 
 limitFromMaybe :: Integer -> Maybe Integer -> Integer
 limitFromMaybe def limit

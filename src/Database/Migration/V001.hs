@@ -257,7 +257,7 @@ migration () =
                 _uName = field "name" text notNull,
                 _uLogin = field "login" text notNull,
                 _uPassword = field "password" text notNull,
-                _uDateOfRegistration = field "registration_date" date notNull,
+                _uDateOfRegistration = field "registration_date" date notNull (defaultTo_ (cast_ currentTimestamp_ date)),
                 _uIsAdmin = field "is_admin" boolean notNull,
                 _uCanCreate = field "can_create" boolean notNull
               }

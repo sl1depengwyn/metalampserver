@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Database.Migration
-  ( module Database.Migration.V002,
+  ( module Database.Migration.V003,
     migration,
     db,
     allowDestructive,
@@ -28,14 +28,16 @@ import Database.Beam.Migrate.Types
   )
 import Database.Beam.Postgres (Postgres)
 import qualified Database.Migration.V001 as V001 (migration)
-import Database.Migration.V002 hiding (migration)
 import qualified Database.Migration.V002 as V002 (migration)
+import Database.Migration.V003 hiding (migration)
+import qualified Database.Migration.V003 as V003 (migration)
 import Universum
 
 migration :: MigrationSteps Postgres () (CheckedDatabaseSettings Postgres NewsDb)
 migration =
   migrationStep "Initial commit" V001.migration
     >>> migrationStep "Make Category parent field nullable" V002.migration
+    >>> migrationStep "Add noPictures column to news" V003.migration
 
 db :: DatabaseSettings Postgres NewsDb
 db = unCheckDatabase (evaluateDatabase migration)

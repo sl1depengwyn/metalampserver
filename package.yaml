@@ -38,8 +38,10 @@ dependencies:
 - postgresql-simple
 - resource-pool
 - fast-logger
-- servant-server
 - servant
+- servant-server
+- servant-auth
+- servant-auth-server
 - wai
 - warp
 

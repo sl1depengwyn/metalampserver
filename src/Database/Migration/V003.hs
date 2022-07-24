@@ -8,9 +8,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Database.Migration.V002
-  ( module Database.Migration.V001,
-    module Database.Migration.V002,
+module Database.Migration.V003
+  ( module Database.Migration.V002,
+    module Database.Migration.V003,
   )
 where
 
@@ -26,20 +26,14 @@ import Database.Beam.Migrate.Extended
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Extensions.UuidOssp
 import qualified Database.Beam.Postgres.Migrate as PG
-import Database.Migration.V001 hiding
-  ( Cat,
-    CatId,
-    CatT,
-    ImageToNews,
+import Database.Migration.V002 hiding
+  ( ImageToNews,
     ImageToNewsId,
     ImageToNewsT,
     News,
     NewsDb,
     NewsId,
     NewsT,
-    catId,
-    catName,
-    catParent,
     isNewsPublished,
     itnImageId,
     itnNewsId,
@@ -55,9 +49,6 @@ import Database.Migration.V001 hiding
     newsId,
     newsText,
     newsTitle,
-    _cId,
-    _cName,
-    _cParent,
     _itnImageId,
     _itnNewsId,
     _mIsPublished,
@@ -73,67 +64,18 @@ import Database.Migration.V001 hiding
     _nTitle,
     _nUsers,
   )
-import qualified Database.Migration.V001 as V001
+import qualified Database.Migration.V002 as V002
 import Universum
-
--- | Category type
-data CatT f = Cat
-  { _cId :: Columnar f (SqlSerial Int32),
-    _cName :: Columnar f Text,
-    _cParent :: PrimaryKey CatT (Nullable f)
-  }
-  deriving (Generic, Beamable)
-
-type Cat = CatT Identity
-
-deriving instance Show Cat
-
-deriving instance Eq Cat
-
-instance FromJSON Cat where
-  parseJSON = A.genericParseJSON A.customOptions
-
-instance ToJSON Cat where
-  toJSON = A.genericToJSON A.customOptions
-
-instance Table CatT where
-  data PrimaryKey CatT f = CatId (Columnar f (SqlSerial Int32))
-    deriving (Generic, Beamable)
-  primaryKey = CatId . _cId
-
-deriving instance Show (PrimaryKey CatT (Nullable Identity))
-
-deriving instance Eq (PrimaryKey CatT (Nullable Identity))
-
-deriving instance Show (PrimaryKey CatT Identity)
-
-deriving instance Eq (PrimaryKey CatT Identity)
-
-instance FromJSON (PrimaryKey CatT (Nullable Identity)) where
-  parseJSON = A.genericParseJSON A.customOptions
-
-instance ToJSON (PrimaryKey CatT (Nullable Identity)) where
-  toJSON = A.genericToJSON A.customOptions
-
-instance FromJSON (PrimaryKey CatT Identity) where
-  parseJSON = A.genericParseJSON A.customOptions
-
-instance ToJSON (PrimaryKey CatT Identity) where
-  toJSON = A.genericToJSON A.customOptions
-
-Cat
-  (LensFor catId)
-  (LensFor catName)
-  (CatId (LensFor catParent)) = tableLenses
 
 -- | News type
 data NewsT f = News
   { _nId :: Columnar f (SqlSerial Int32),
     _nTitle :: Columnar f Text,
     _nDateOfCreation :: Columnar f Day,
-    _nCreator :: PrimaryKey V001.UserT f,
+    _nCreator :: PrimaryKey V002.UserT f,
     _nCat :: PrimaryKey CatT f,
     _nText :: Columnar f Text,
+    _nNoPictures :: Columnar f Int32,
     _mIsPublished :: Columnar f Bool
   }
   deriving (Generic, Beamable)
@@ -169,9 +111,10 @@ News
   (LensFor newsId)
   (LensFor newsTitle)
   (LensFor newsCreatedAt)
-  (V001.UserId (LensFor newsCreator))
+  (V002.UserId (LensFor newsCreator))
   (CatId (LensFor newsCat))
   (LensFor newsText)
+  (LensFor newsNoPictures)
   (LensFor isNewsPublished) = tableLenses
 
 -- | Image to News type
@@ -213,10 +156,10 @@ ImageToNews
   (NewsId (LensFor itnNewsId)) = tableLenses
 
 data NewsDb f = NewsDb
-  { _nUsers :: f (TableEntity V001.UserT),
-    _nCats :: f (TableEntity CatT),
+  { _nUsers :: f (TableEntity V002.UserT),
+    _nCats :: f (TableEntity V002.CatT),
     _nNews :: f (TableEntity NewsT),
-    _nImages :: f (TableEntity V001.ImageT),
+    _nImages :: f (TableEntity V002.ImageT),
     _nImagesToNews :: f (TableEntity ImageToNewsT)
   }
   deriving (Generic, Database Postgres)
@@ -229,36 +172,29 @@ NewsDb
   (TableLens nImagesToNews) = dbLenses
 
 migration ::
-  CheckedDatabaseSettings Postgres V001.NewsDb ->
+  CheckedDatabaseSettings Postgres V002.NewsDb ->
   Migration Postgres (CheckedDatabaseSettings Postgres NewsDb)
 migration oldDb =
   do
-    catsWithNoNotNull <- alterTable (oldDb ^. V001.nCats) $
-      \oldCats -> do
-        nullableParent <- dropNotNullColumn (oldCats ^. V001.catParent)
+    newNews <- alterTable (oldDb ^. V002.nNews) $
+      \oldNews@V002.News {..} -> do
+        _nNoPictures <- addColumn (field "no_pictures" int notNull)
         pure $
-          Cat
-            { _cId = oldCats ^. V001.catId,
-              _cName = oldCats ^. V001.catName,
-              _cParent = CatId nullableParent
-            }
-    newNews <- alterTable (oldDb ^. V001.nNews) $
-      \oldNews@V001.News {..} -> do
-        pure $
-          News {_nCat = CatId (oldNews ^. V001.newsCat), ..}
-    newImagesToNews <- alterTable (oldDb ^. V001.nImagesToNews) $ \olditn ->
+          News {_nCat = CatId (oldNews ^. V002.newsCat), ..}
+    newImagesToNews <- alterTable (oldDb ^. V002.nImagesToNews) $ \olditn ->
       pure $
         ImageToNews
-          { _itnImageId = ImageId (olditn ^. V001.itnImageId),
-            _itnNewsId = NewsId (olditn ^. V001.itnNewsId)
+          { _itnImageId = ImageId (olditn ^. V002.itnImageId),
+            _itnNewsId = NewsId (olditn ^. V002.itnNewsId)
           }
-    users <- preserve (oldDb ^. V001.nUsers)
-    news <- preserve (oldDb ^. V001.nNews)
-    images <- preserve (oldDb ^. V001.nImages)
+    users <- preserve (oldDb ^. V002.nUsers)
+    news <- preserve (oldDb ^. V002.nNews)
+    images <- preserve (oldDb ^. V002.nImages)
+    cats <- preserve (oldDb ^. V002.nCats)
     pure $
       NewsDb
         { _nUsers = users,
-          _nCats = catsWithNoNotNull,
+          _nCats = cats,
           _nNews = newNews,
           _nImages = images,
           _nImagesToNews = newImagesToNews

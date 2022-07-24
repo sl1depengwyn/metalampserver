@@ -32,6 +32,7 @@ library
       Database.Migration
       Database.Migration.V001
       Database.Migration.V002
+      Database.Migration.V003
       Database.News
       Database.Users
       Logger
@@ -63,6 +64,8 @@ library
     , postgresql-simple
     , resource-pool
     , servant
+    , servant-auth
+    , servant-auth-server
     , servant-server
     , text
     , time
@@ -98,6 +101,8 @@ executable metalampserver-exe
     , postgresql-simple
     , resource-pool
     , servant
+    , servant-auth
+    , servant-auth-server
     , servant-server
     , text
     , time
@@ -134,6 +139,8 @@ test-suite metalampserver-test
     , postgresql-simple
     , resource-pool
     , servant
+    , servant-auth
+    , servant-auth-server
     , servant-server
     , text
     , time

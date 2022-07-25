@@ -77,9 +77,6 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
       news <- filter_ (queryToWhere params) (all_ (db ^. nNews))
       author <- related_ (db ^. nUsers) (_nCreator news)
       cat <- related_ (db ^. nCats) (_nCat news)
-      (_, imgCnt) <- filter_ (\(itn, _) -> itn ==. news ^. newsId) (aggregate_ (\itn -> (group_ (itn ^. itnNewsId), as_ @Int32 (count_ (itn ^. itnImageId)))) (all_ (db ^. nImagesToNews)))
- 
-      imgId <- leftJoin_ (all_ (db ^. nImagesToNews)) (\itn -> itn ^. itnNewsId ==. news ^. newsId)
 
       whenJust text $ \(toTextEntry -> text) ->
         guard_
@@ -101,4 +98,4 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
       ByDate -> orderBy_ (\(n, a, c) -> order (n ^. newsCreatedAt)) query
       ByAuthor -> orderBy_ (\(n, a, c) -> order (a ^. userName)) query
       ByCat -> orderBy_ (\(n, a, c) -> order (c ^. catName)) query
-      ByNoImages -> orderBy_ (\(n, a, c) -> order (n ^. newsCreatedAt)) query -- TODO replace with appropriate comprarison
+      ByNoImages -> orderBy_ (\(n, a, c) -> order (n ^. newsNoPictures)) query

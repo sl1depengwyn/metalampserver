@@ -5,7 +5,7 @@
 module Logger
   ( Verbosity (..),
     Config (..),
-    Handle,
+    Handle (..),
     withHandle,
     debug,
     info,

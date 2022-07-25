@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Database
@@ -10,7 +11,7 @@ module Database
     Config,
     getNews,
     getUser,
-    addUser
+    addUser,
   )
 where
 
@@ -23,13 +24,16 @@ import Database.Beam.Migrate
 import Database.Beam.Migrate.Simple
 import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
+import Database.Cats
 import Database.Migration
 import Database.News
 import qualified Database.PostgreSQL.Simple as PGS
 import Database.Users
 import Lens.Micro
 import qualified Logger
+import qualified System.Log.FastLogger as FL
 import Universum hiding (Handle)
+import Database.Beam.Backend (SqlSerial)
 
 newtype Config = Config
   { cConnectionString :: Text
@@ -76,3 +80,13 @@ addUser :: Handle -> NewUser -> IO ()
 addUser h user = runQuery h (addUser' user)
 
 paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f
+
+getCategory :: Handle -> SqlSerial Int32 -> IO [Maybe (CatT Identity)]
+getCategory h cid = runQuery h (runSelectReturningList $ selectWith (getCategory' cid))
+
+testConf = Config "dbname='metalampservertest' user='postgres' password='dateofbuyps'"
+
+testLogh :: IO Logger.Handle
+testLogh = do
+  s <- FL.newStderrLoggerSet FL.defaultBufSize
+  pure Logger.Handle {Logger.hConfig = Logger.Config Nothing (Just Logger.Debug), Logger.hLoggerSet = s}

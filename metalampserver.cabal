@@ -29,6 +29,7 @@ library
       Database
       Database.Beam.Migrate.Extended
       Database.Cats
+      Database.Images
       Database.Migration
       Database.Migration.V001
       Database.Migration.V002

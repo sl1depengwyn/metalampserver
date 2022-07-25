@@ -40,6 +40,7 @@ library
       Server
       Server.Api
       Server.Cats
+      Server.Images
       Server.Main
       Server.News
       Server.Users

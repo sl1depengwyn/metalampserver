@@ -89,6 +89,7 @@ getNews' params@NewsQueryParams {..} = maybe query ordered sortBy
         guard_ (author ^. userName `like_` val_ usernameToFind)
 
       pure (news, author, cat)
+    
     order :: QExpr Postgres s a -> QOrd Postgres s a
     order = case sortOrder of
       Just Desc -> desc_

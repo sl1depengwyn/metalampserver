@@ -22,9 +22,11 @@ import Servant
 import Servant.API.ContentTypes
 import Server
 import Server.Cats
+import Server.Images
 import Server.Users
 import Universum hiding (Handle)
 import Universum.String.Reexport
+import qualified Database as Db
 
 type NewsApi =
   "news"
@@ -40,7 +42,7 @@ type NewsApi =
     :> QueryParam "sort_order" Db.SortOrder
     :> QueryParam "limit" Integer
     :> QueryParam "offset" Integer
-    :> Get '[JSON] [(News, User, Cat)]
+    :> Get '[JSON] [PostToReturn]
 
 instance FromHttpApiData Db.Sorting where
   parseQueryParam (toLower -> "date") = Right Db.ByDate
@@ -59,8 +61,9 @@ data PostToReturn = PostToReturn
     ptrTitle :: Text,
     ptrDateOfCreation :: Day,
     ptrCreator :: UserToReturn,
-    ptrCat :: CatToReturn,
+    ptrCat :: Maybe CatToReturn,
     ptrText :: Text,
+    ptrImages :: [ImageToReturn],
     ptrIsPublished :: Bool
   }
   deriving (Show, Generic)
@@ -71,15 +74,16 @@ instance FromJSON PostToReturn where
 instance ToJSON PostToReturn where
   toJSON = A.genericToJSON (A.customOptionsWithDrop 3)
 
-postToReturn :: News -> User -> CatToReturn -> PostToReturn
-postToReturn news user cat =
+postToReturn :: News -> User -> [Maybe Cat] -> [Int32] -> PostToReturn
+postToReturn news user cat iIds =
   PostToReturn
     { ptrId = unSerial (news ^. newsId),
       ptrTitle = news ^. newsTitle,
       ptrDateOfCreation = news ^. newsCreatedAt,
       ptrCreator = userToReturn user,
-      ptrCat = cat,
+      ptrCat = catToReturn cat,
       ptrText = news ^. newsText,
+      ptrImages = map imageToReturn iIds,
       ptrIsPublished = news ^. isNewsPublished
     }
 
@@ -96,7 +100,7 @@ handleNews ::
   Maybe Db.SortOrder ->
   Maybe Integer ->
   Maybe Integer ->
-  AppM [(News, User, Cat)]
+  AppM [PostToReturn]
 handleNews
   createdAt
   createdUntil
@@ -114,4 +118,11 @@ handleNews
     def <- askLimit
     let limit = limitFromMaybe def limit'
         offset = offsetFromMaybe offset'
-    liftIO $ Db.getNews dbh limit offset (Db.NewsQueryParams {..})
+    news <- liftIO $ Db.getNews dbh limit offset (Db.NewsQueryParams {..})
+    mapM
+      ( \(n, a, _) -> do
+          cats <- liftIO $ Db.getCategory dbh (n ^. newsCat)
+          iIds <- liftIO $ Db.getNewsImages dbh (n ^. newsId)
+          pure (postToReturn n a cats iIds)
+      )
+      news

@@ -12,6 +12,8 @@ module Database
     getNews,
     getUser,
     addUser,
+    getCategory,
+    getNewsImages
   )
 where
 
@@ -34,6 +36,8 @@ import qualified Logger
 import qualified System.Log.FastLogger as FL
 import Universum hiding (Handle)
 import Database.Beam.Backend (SqlSerial)
+import Database.Images
+import Database.Beam.Backend.SQL (unSerial)
 
 newtype Config = Config
   { cConnectionString :: Text
@@ -79,10 +83,13 @@ getUser h login = runQuery h (runSelectReturningOne (select (getUser' login)))
 addUser :: Handle -> NewUser -> IO ()
 addUser h user = runQuery h (addUser' user)
 
-paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f
-
 getCategory :: Handle -> SqlSerial Int32 -> IO [Maybe (CatT Identity)]
 getCategory h cid = runQuery h (runSelectReturningList $ selectWith (getCategory' cid))
+
+getNewsImages :: Handle -> SqlSerial Int32 -> IO [Int32]
+getNewsImages h nid = map unSerial <$> runQuery h (runSelectReturningList $ select (getImageIdsByNews' nid))
+
+paginated f limit offset = runSelectReturningList . select . limit_ limit . offset_ offset . f
 
 testConf = Config "dbname='metalampservertest' user='postgres' password='dateofbuyps'"
 

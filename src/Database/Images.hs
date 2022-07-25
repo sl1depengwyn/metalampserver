@@ -30,10 +30,9 @@ import Lens.Micro
 import qualified Logger
 import Universum hiding (Handle, sortBy)
 
-
-getImageIdsByNews :: Int32 -> Q Postgres NewsDb s (QExpr Postgres s (SqlSerial Int32))
-getImageIdsByNews newsId = do
-    imgId <- filter_ (\itn -> itn ^. itnNewsId ==. val_ (SqlSerial newsId)) (all_ (db ^. nImagesToNews))
+getImageIdsByNews' :: SqlSerial Int32 -> Q Postgres NewsDb s (QExpr Postgres s (SqlSerial Int32))
+getImageIdsByNews' newsId = do
+    imgId <- filter_ (\itn -> itn ^. itnNewsId ==. val_ newsId) (all_ (db ^. nImagesToNews))
     pure (imgId ^. itnImageId)
 
 getImageById = undefined
